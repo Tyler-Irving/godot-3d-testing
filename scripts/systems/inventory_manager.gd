@@ -1,8 +1,5 @@
 extends Node
-## Autoload singleton managing the player's block inventory.
-##
-## Phase 1: Simple version — player starts with unlimited blocks.
-## Phase 3 will add proper inventory tracking and the hotbar UI.
+## Autoload singleton managing the player's block inventory and hotbar.
 
 ## inventory[block_type] = count
 var inventory: Dictionary = {}
@@ -24,15 +21,12 @@ signal hotbar_selection_changed(slot_index: int)
 
 
 func _ready() -> void:
-	# Start with some blocks for testing
-	inventory[BlockData.BlockType.DIRT] = 99
-	inventory[BlockData.BlockType.GRASS] = 99
-	inventory[BlockData.BlockType.STONE] = 99
-	inventory[BlockData.BlockType.SAND] = 99
-	inventory[BlockData.BlockType.WOOD] = 99
+	# Start with some blocks for each hotbar type
+	for block_type in hotbar_slots:
+		inventory[block_type] = 50
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	# Number keys 1-5 to select hotbar slot
 	for i in 5:
 		if event.is_action_pressed("hotbar_%d" % (i + 1)):
@@ -75,3 +69,22 @@ func remove_block(block_type: int, count: int = 1) -> bool:
 	inventory[block_type] = current - count
 	inventory_changed.emit(block_type, inventory[block_type])
 	return true
+
+
+## Get all block types the player has at least 1 of
+func get_all_owned_types() -> Array[int]:
+	var types: Array[int] = []
+	for block_type in inventory:
+		if inventory[block_type] > 0:
+			types.append(block_type)
+	return types
+
+
+## Reset inventory to defaults
+func reset() -> void:
+	inventory.clear()
+	selected_slot = 0
+	for block_type in hotbar_slots:
+		inventory[block_type] = 50
+	inventory_changed.emit(0, 0)  # Generic refresh signal
+	hotbar_selection_changed.emit(selected_slot)
