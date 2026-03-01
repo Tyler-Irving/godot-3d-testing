@@ -14,8 +14,10 @@ const CHUNK_SIZE := 16
 ## Dictionary mapping Vector3i chunk positions to Chunk nodes
 var chunks: Dictionary = {}
 
+const TorchManagerScript := preload("res://scripts/world/torch_manager.gd")
+
 var generator: WorldGenerator
-var torch_manager: TorchManager
+var torch_manager: Node3D
 
 signal world_generated
 
@@ -24,7 +26,7 @@ func _ready() -> void:
 	generator = WorldGenerator.new()
 	generator.set_seed(world_seed)
 
-	torch_manager = TorchManager.new()
+	torch_manager = TorchManagerScript.new()
 	torch_manager.name = "TorchManager"
 	add_child(torch_manager)
 
@@ -98,7 +100,7 @@ func set_block_at_world_pos(world_x: int, world_y: int, world_z: int, block_type
 
 	# Handle torch placement/removal
 	var world_pos := Vector3i(world_x, world_y, world_z)
-	var old_type := chunks[chunk_pos].get_block(local_x, local_y, local_z)
+	var old_type: int = chunks[chunk_pos].get_block(local_x, local_y, local_z)
 
 	if old_type == BlockData.BlockType.TORCH:
 		torch_manager.remove_torch(world_pos)
@@ -152,7 +154,7 @@ func get_save_data() -> Dictionary:
 ## Apply saved block data to existing chunks, then rebuild meshes.
 func apply_save_data(chunks_data: Dictionary) -> void:
 	for key in chunks_data:
-		var parts := key.split(",")
+		var parts: PackedStringArray = key.split(",")
 		if parts.size() != 3:
 			continue
 		var chunk_pos := Vector3i(int(parts[0]), int(parts[1]), int(parts[2]))
