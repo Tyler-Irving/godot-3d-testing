@@ -1,7 +1,5 @@
 class_name CraftingSystem
 ## Defines crafting recipes and handles crafting logic.
-##
-## Each recipe takes ingredient block types + counts and produces a result.
 
 class Recipe:
 	var ingredients: Dictionary = {}  # {BlockType: count}
@@ -14,32 +12,36 @@ class Recipe:
 		result_count = p_count
 
 
-## All available recipes
-static var recipes: Array = [
-	# Stone + Wood = 2 Brick
-	Recipe.new(
-		{BlockData.BlockType.STONE: 2, BlockData.BlockType.WOOD: 1},
-		BlockData.BlockType.BRICK, 2
-	),
-	# Dirt + Sand = 2 Clay
-	Recipe.new(
-		{BlockData.BlockType.DIRT: 2, BlockData.BlockType.SAND: 1},
-		BlockData.BlockType.CLAY, 2
-	),
-	# Sand + Stone = 3 Dirt (recycle)
-	Recipe.new(
-		{BlockData.BlockType.SAND: 2, BlockData.BlockType.STONE: 2},
-		BlockData.BlockType.DIRT, 3
-	),
-	# Wood + Dirt = Torch (for Phase 4 lighting)
-	Recipe.new(
-		{BlockData.BlockType.WOOD: 1, BlockData.BlockType.DIRT: 1},
-		BlockData.BlockType.TORCH, 2
-	),
-]
+## Lazy-initialized recipe list. Static var initializers with inner class
+## constructors can fail silently in GDScript, so we build on first access.
+static var _recipes: Array = []
+static var _initialized := false
 
 
-## Check if a recipe can be crafted with current inventory
+static func get_recipes() -> Array:
+	if not _initialized:
+		_recipes = [
+			Recipe.new(
+				{BlockData.BlockType.STONE: 2, BlockData.BlockType.WOOD: 1},
+				BlockData.BlockType.BRICK, 2
+			),
+			Recipe.new(
+				{BlockData.BlockType.DIRT: 2, BlockData.BlockType.SAND: 1},
+				BlockData.BlockType.CLAY, 2
+			),
+			Recipe.new(
+				{BlockData.BlockType.SAND: 2, BlockData.BlockType.STONE: 2},
+				BlockData.BlockType.DIRT, 3
+			),
+			Recipe.new(
+				{BlockData.BlockType.WOOD: 1, BlockData.BlockType.DIRT: 1},
+				BlockData.BlockType.TORCH, 2
+			),
+		]
+		_initialized = true
+	return _recipes
+
+
 static func can_craft(recipe: Recipe) -> bool:
 	for block_type in recipe.ingredients:
 		var needed: int = recipe.ingredients[block_type]
@@ -48,16 +50,13 @@ static func can_craft(recipe: Recipe) -> bool:
 	return true
 
 
-## Execute a craft: remove ingredients, add results
 static func craft(recipe: Recipe) -> bool:
 	if not can_craft(recipe):
 		return false
 
-	# Remove ingredients
 	for block_type in recipe.ingredients:
 		var count: int = recipe.ingredients[block_type]
 		InventoryManager.remove_block(block_type, count)
 
-	# Add result
 	InventoryManager.add_block(recipe.result_type, recipe.result_count)
 	return true
