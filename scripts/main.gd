@@ -1,37 +1,86 @@
 extends Node3D
-## Main scene script: sets up the world, player, environment, and lighting.
-##
-## ===== 3D CONCEPT: WorldEnvironment =====
-## WorldEnvironment controls global rendering settings:
-##   - Sky: what's above the world (procedural sky, HDR skybox, etc.)
-##   - Ambient light: fills shadows so they're not pitch black
-##   - Fog: fades distant objects (hides world edges)
-##   - Tonemap: how HDR colors map to the screen
-##
-## ===== 3D CONCEPT: DirectionalLight3D =====
-## Simulates sunlight — infinitely far away, rays are parallel.
-## All objects in the scene receive light from the same direction.
-## The `rotation` of the light determines the sun angle.
-## Shadow mapping creates shadows from this light.
-## ========================================
+## Main scene script: wires together world, player, environment, day/night,
+## save/load, and all UI systems.
 
 @onready var world: Node3D = $World
 @onready var player: CharacterBody3D = $Player
+@onready var sun: DirectionalLight3D = $DirectionalLight3D
+@onready var world_env: WorldEnvironment = $WorldEnvironment
+@onready var hud: CanvasLayer = $HUD
+
+var day_night: Node = null
 
 
 func _ready() -> void:
-	# Wire up the player interaction system to the world and camera
+	# Wire up the player interaction system
 	var interaction: Node3D = player.get_node("PlayerInteraction")
 	var camera: Camera3D = player.get_node("CameraPivot/Camera3D")
 	interaction.setup(world, camera)
 
-	# Position the player above the terrain so they don't spawn inside blocks.
-	# The terrain base height is ~20 blocks, so spawn at Y=25 to be safe.
-	# Center of the world: 2 chunks * 16 blocks = 32, so center at x=32, z=32.
+	# Set up day/night cycle
+	_setup_day_night()
+
+	# Connect pause menu "new world" signal
+	var pause_menu: Control = hud.get_node("PauseMenu")
+	if pause_menu.has_signal("new_world_confirmed"):
+		pause_menu.new_world_confirmed.connect(_on_new_world)
+
+	# Load existing save or start fresh
+	if GameState.has_save_file():
+		var data := GameState.load_game()
+		if not data.is_empty():
+			GameState.apply_save_data(data, world, player)
+			print("Loaded existing save.")
+		else:
+			_spawn_player_default()
+	else:
+		_spawn_player_default()
+
+	print("Tiny World 3D")
+	print("WASD=move, Space=jump, Mouse=look, Escape=release mouse")
+	print("Left click (hold)=mine, Right click=place, 1-5/scroll=select block")
+	print("C=crafting, N=new world")
+	print("Game auto-saves on quit.")
+
+
+func _spawn_player_default() -> void:
 	player.position = Vector3(32, 30, 32)
 
-	print("Tiny World 3D — Phase 1")
-	print("WASD to move, Space to jump, Mouse to look around")
-	print("Left click to destroy blocks, Right click to place blocks")
-	print("1-5 or scroll wheel to change block type")
-	print("Escape to release/capture mouse")
+
+func _setup_day_night() -> void:
+	# Create the day/night cycle controller
+	var dnc_script := preload("res://scripts/systems/day_night_cycle.gd")
+	day_night = dnc_script.new()
+	day_night.name = "DayNightCycle"
+	day_night.sun_light = sun
+	day_night.environment = world_env.environment
+
+	# Get the sky material from the environment
+	var sky: Sky = world_env.environment.sky
+	if sky and sky.sky_material is ProceduralSkyMaterial:
+		day_night.sky_material = sky.sky_material
+
+	add_child(day_night)
+
+
+func _on_new_world() -> void:
+	# Delete save and regenerate
+	GameState.delete_save()
+	InventoryManager.reset()
+
+	# Randomize world seed
+	var new_seed := randi()
+	world.world_seed = new_seed
+	world.generator.set_seed(new_seed)
+	GameState.world_seed = new_seed
+
+	world.generate_world()
+	_spawn_player_default()
+	print("New world generated with seed: %d" % new_seed)
+
+
+func _notification(what: int) -> void:
+	# Auto-save when the game is about to close
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		GameState.save_game(world, player)
+		get_tree().quit()
