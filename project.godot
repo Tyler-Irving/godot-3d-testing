@@ -12,8 +12,8 @@ config_version=5
 
 config/name="Tiny World 3D"
 run/main_scene="res://scenes/main.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus")
 config/auto_accept_quit=false
+config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
 
