@@ -56,7 +56,9 @@ func setup(world: Node, camera: Camera3D) -> void:
 		_camera.block_untargeted.connect(_on_block_untargeted)
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
+	# Use _input instead of _unhandled_input — UI Control nodes consume
+	# mouse button events before _unhandled_input fires.
 	# Left click — destroy block
 	if event.is_action_pressed("destroy_block") and _targeted_block != null:
 		_destroy_block()
