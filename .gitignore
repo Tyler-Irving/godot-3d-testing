@@ -1,0 +1,9 @@
+# Godot 4 generated files
+.godot/
+
+# Export templates
+*.export
+
+# OS junk
+.DS_Store
+Thumbs.db
