@@ -88,13 +88,10 @@ static func build_mesh(
 			for z in CHUNK_SIZE:
 				var block_type: int = block_data[x][y][z]
 
-				# Skip air — nothing to render
+				# Skip air and water — nothing to render for these
 				if block_type == BlockData.BlockType.AIR:
 					continue
-
-				# Skip transparent non-solid blocks (like water) for now
-				# We'll handle water rendering in a later phase
-				if not BlockData.is_solid(block_type):
+				if block_type == BlockData.BlockType.WATER:
 					continue
 
 				var block_color := BlockData.get_color(block_type)
