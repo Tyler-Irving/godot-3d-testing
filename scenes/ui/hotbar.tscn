@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c4hotbar001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hotbar.gd" id="1_hotbar"]
+
+[node name="Hotbar" type="HBoxContainer"]
+script = ExtResource("1_hotbar")
